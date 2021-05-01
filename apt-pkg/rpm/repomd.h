@@ -1,7 +1,7 @@
 // CNC:2002-07-03
 
 #ifndef PKGLIB_REPOMD_H
-#define PKBLIB_REPOMD_H
+#define PKGLIB_REPOMD_H
 
 #include <apt-pkg/aptconf.h>
 #include <apt-pkg/repository.h>
