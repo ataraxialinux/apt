@@ -15,6 +15,8 @@
    ##################################################################### */
 									/*}}}*/
 // Include Files							/*{{{*/
+#include <config.h>
+
 #include <apt-pkg/fileutl.h>
 #include <apt-pkg/acquire-method.h>
 #include <apt-pkg/error.h>
@@ -41,7 +43,6 @@
 #include <apti18n.h>
 
 #include "rfc2553emu.h"
-#include "connect.h"
 #include "ftp.h"
 									/*}}}*/
 
@@ -70,7 +71,7 @@ time_t FtpMethod::FailTime = 0;
 // FTPConn::FTPConn - Constructor					/*{{{*/
 // ---------------------------------------------------------------------
 /* */
-FTPConn::FTPConn(URI Srv) : Len(0), ServerFd(-1), DataFd(-1), 
+FTPConn::FTPConn(URI Srv) : Len(0), DataFd(-1),
                             DataListenFd(-1), ServerName(Srv)
 {
    Debug = _config->FindB("Debug::Acquire::Ftp",false);
@@ -90,8 +91,9 @@ FTPConn::~FTPConn()
 /* Just tear down the socket and data socket */
 void FTPConn::Close()
 {
-   close(ServerFd);
-   ServerFd = -1;
+   if (ServerFd)
+      ServerFd->Close();
+   ServerFd.reset();
    close(DataFd);
    DataFd = -1;
    close(DataListenFd);
@@ -109,7 +111,7 @@ void FTPConn::Close()
 bool FTPConn::Open(pkgAcqMethod *Owner)
 {
    // Use the already open connection if possible.
-   if (ServerFd != -1)
+   if (ServerFd && (ServerFd->Fd() != -1))
       return true;
    
    Close();
@@ -167,12 +169,12 @@ bool FTPConn::Open(pkgAcqMethod *Owner)
    
    // Get the remote server's address
    PeerAddrLen = sizeof(PeerAddr);
-   if (getpeername(ServerFd,(sockaddr *)&PeerAddr,&PeerAddrLen) != 0)
+   if (getpeername(ServerFd->Fd(),(sockaddr *)&PeerAddr,&PeerAddrLen) != 0)
       return _error->Errno("getpeername",_("Unable to determine the peer name"));
    
    // Get the local machine's address
    ServerAddrLen = sizeof(ServerAddr);
-   if (getsockname(ServerFd,(sockaddr *)&ServerAddr,&ServerAddrLen) != 0)
+   if (getsockname(ServerFd->Fd(),(sockaddr *)&ServerAddr,&ServerAddrLen) != 0)
       return _error->Errno("getsockname",_("Unable to determine the local name"));
    
    return Res;
@@ -190,7 +192,7 @@ bool FTPConn::Login()
    // Setup the variables needed for authentication
    string User = "anonymous";
    // CNC:2003-06-16
-   string Pass = "apt_get_ftp_2.1@rpm.linux.user";
+   string Pass = "apt_get_ftp_2.1@alt.linux.user";
 
    // Fill in the user/pass
    if (ServerName.User.empty() == false)
@@ -302,7 +304,7 @@ bool FTPConn::Login()
 /* This performs a very simple buffered read. */
 bool FTPConn::ReadLine(string &Text)
 {
-   if (ServerFd == -1)
+   if ((!ServerFd) || (ServerFd->Fd() == -1))
       return false;
    
    // Suck in a line
@@ -327,14 +329,14 @@ bool FTPConn::ReadLine(string &Text)
       }
 
       // Wait for some data..
-      if (WaitFd(ServerFd,false,TimeOut) == false)
+      if (WaitFd(ServerFd->Fd(),false,TimeOut) == false)
       {
 	 Close();
 	 return _error->Error(_("Connection timeout"));
       }
       
       // Suck it back
-      int Res = read(ServerFd,Buffer + Len,sizeof(Buffer) - Len);
+      int Res = read(ServerFd->Fd(),Buffer + Len,sizeof(Buffer) - Len);
       if (Res == 0)
 	 _error->Error(_("Server closed the connection"));
       if (Res <= 0)
@@ -422,12 +424,14 @@ bool FTPConn::ReadResp(unsigned int &Ret,string &Text)
 /* Simple printf like function.. */
 bool FTPConn::WriteMsg(unsigned int &Ret,string &Text,const char *Fmt,...)
 {
-   va_list args;
-   va_start(args,Fmt);
-
    // sprintf the description
    char S[400];
+
+   va_list args;
+   va_start(args,Fmt);
    vsnprintf(S,sizeof(S) - 4,Fmt,args);
+   va_end(args);
+
    strcat(S,"\r\n");
  
    if (Debug == true)
@@ -438,13 +442,13 @@ bool FTPConn::WriteMsg(unsigned int &Ret,string &Text,const char *Fmt,...)
    unsigned long Start = 0;
    while (Len != 0)
    {
-      if (WaitFd(ServerFd,true,TimeOut) == false)
+      if (WaitFd(ServerFd->Fd(),true,TimeOut) == false)
       {
 	 Close();
 	 return _error->Error(_("Connection timeout"));
       }
       
-      int Res = write(ServerFd,S + Start,Len);
+      int Res = write(ServerFd->Fd(),S + Start,Len);
       if (Res <= 0)
       {
 	 _error->Errno("write",_("Write Error"));
@@ -838,7 +842,7 @@ bool FTPConn::Finalize()
 // ---------------------------------------------------------------------
 /* This opens a data connection, sends REST and RETR and then
    transfers the file over. */
-bool FTPConn::Get(const char *Path,FileFd &To,unsigned long Resume,
+bool FTPConn::Get(const char *Path,FileFd &To,unsigned long long Resume,
 		  Hashes &Hash,bool &Missing)
 {
    Missing = false;
@@ -962,7 +966,7 @@ void FtpMethod::SigTerm(int)
 // FtpMethod::Configuration - Handle a configuration message		/*{{{*/
 // ---------------------------------------------------------------------
 /* We stash the desired pipeline depth */
-bool FtpMethod::Configuration(string Message)
+bool FtpMethod::Configuration(const string &Message)
 {
    if (pkgAcqMethod::Configuration(Message) == false)
       return false;
