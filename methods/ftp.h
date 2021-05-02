@@ -64,8 +64,8 @@ class FTPConn
 
 class FtpMethod : public pkgAcqMethod
 {
-   virtual bool Fetch(FetchItem *Itm) override;
-   virtual bool Configuration(const string &Message) override;
+   virtual bool Fetch(FetchItem *Itm);
+   virtual bool Configuration(string Message);
    
    FTPConn *Server;
    
