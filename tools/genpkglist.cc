@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <assert.h>
+#include <libgen.h>
 
 #include <map>
 #include <iostream>
