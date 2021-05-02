@@ -628,7 +628,7 @@ RPMDBHandler::~RPMDBHandler()
 string RPMDBHandler::DataPath(bool DirectoryOnly)
 {
    string File = "Packages";
-   char *tmp = (char *) rpmExpand("%{_dbpath}", NULL);
+   char *tmp = (char *) rpmExpand("%{_dbpath}", nullptr);
    string DBPath(_config->Find("RPM::RootDir")+tmp);
    free(tmp);
 
