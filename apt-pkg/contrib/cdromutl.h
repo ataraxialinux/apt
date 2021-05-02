@@ -4,11 +4,11 @@
 /* ######################################################################
 
    CDROM Utilities - Some functions to manipulate CDROM mounts.
-   
+
    ##################################################################### */
 									/*}}}*/
 #ifndef PKGLIB_CDROMUTL_H
-#define PKGLIB_ACQUIRE_METHOD_H
+#define PKGLIB_CDROMUTL_H
 
 #include <string>
 

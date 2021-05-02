@@ -23,7 +23,7 @@
 #include <apti18n.h>
     
 #include <sys/wait.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include <sys/statvfs.h>
 #include <dirent.h>
 #include <fcntl.h>

@@ -8,6 +8,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_HOST
 AC_CONFIG_SRCDIR([AUTHORS.RPM])
 AM_INIT_AUTOMAKE([foreign subdir-objects dist-bzip2 1.9.5])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 AC_CONFIG_HEADER([include/config.h:buildlib/config.h.in])
 AC_CONFIG_HEADER([include/apt-pkg/aptconf.h:apt-pkg/aptconf.h.in])
