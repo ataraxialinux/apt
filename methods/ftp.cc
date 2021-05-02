@@ -732,13 +732,15 @@ bool FTPConn::CreateDataFd()
       freeaddrinfo(BindAddr);
       return _error->Errno("socket",_("Could not create a socket"));
    }
-   
+
+#if 0   
    // Bind and listen
    if (bind(DataListenFd,BindAddr->ai_addr,BindAddr->ai_addrlen) < 0)
    {
       freeaddrinfo(BindAddr);
       return _error->Errno("bind",_("Could not bind a socket"));
    }
+#endif
    freeaddrinfo(BindAddr);   
    if (listen(DataListenFd,1) < 0)
       return _error->Errno("listen",_("Could not listen on the socket"));
