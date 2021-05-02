@@ -1,6 +1,8 @@
 /*
  * $Id: genpkglist.cc,v 1.7 2003/01/30 17:18:21 niemeyer Exp $
  */
+#define _GNU_SOURCE
+
 #include <alloca.h>
 #include <ctype.h>
 #include <dirent.h>
@@ -13,7 +15,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <assert.h>
-#include <libgen.h>
 
 #include <map>
 #include <iostream>
